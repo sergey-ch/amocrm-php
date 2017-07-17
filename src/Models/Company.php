@@ -21,6 +21,7 @@ class Company extends AbstractModel
      * @var array Список доступный полей для модели (исключая кастомные поля)
      */
     protected $fields = [
+        'id',
         'name',
         'request_id',
         'date_create',
@@ -137,13 +138,14 @@ class Company extends AbstractModel
 
         if (isset($response['contacts']['add'])) {
             $result = array_map(function($item) {
-                return $item['id'];
+                //return $item['id'];
+                return $item;
             }, $response['contacts']['add']);
         } else {
             return [];
         }
 
-        return count($companies) == 1 ? array_shift($result) : $result;
+        return $result;
     }
 
     /**
@@ -176,5 +178,47 @@ class Company extends AbstractModel
         $response = $this->postRequest('/private/api/v2/json/company/set', $parameters);
 
         return isset($response['contacts']) ? true : false;
+    }
+
+    /**
+     * Обновление компаний
+     *
+     * Метод позволяет обновлять данные по уже существующим компаниям
+     *
+     * @link https://developers.amocrm.ru/rest_api/company_set.php
+     * @param array $companies Массив компаний для пакетного
+     * @return int|array Уникальный идентификатор компании или массив при пакетном добавлении
+     * @throws \AmoCRM\Exception
+     */
+    public function apiMultiUpdate($companies, $modified = 'now')
+    {
+        if (empty($companies)) {
+            $companies = [$this];
+        }
+
+        $parameters = [
+            'contacts' => [
+                'update' => [],
+            ],
+        ];
+
+        foreach ($companies AS $company) {
+            $company = $company->getValues();
+            $company['last_modified'] = strtotime($modified);
+            $parameters['contacts']['update'][] = $company;
+        }
+        
+        $response = $this->postRequest('/private/api/v2/json/company/set', $parameters);
+
+        if (isset($response['contacts']['update'])) {
+            $result = array_map(function($item) {
+                //return $item['id'];
+                return $item;
+            }, $response['contacts']['update']);
+        } else {
+            return [];
+        }
+
+        return $result;
     }
 }
